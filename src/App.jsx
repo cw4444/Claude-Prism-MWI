@@ -14,6 +14,34 @@ const LOADING_MESSAGES = [
   'Resolving quantum superpositions...',
 ]
 
+const REALITY_DISTORTIONS = [
+  { value: 'time_shift', label: 'Time Shift', desc: 'Past or future is altered' },
+  { value: 'identity_swap', label: 'Identity Swap', desc: 'You ≠ you' },
+  { value: 'motivation_inversion', label: 'Motivation Inversion', desc: 'You want the opposite' },
+  { value: 'physics_tweak', label: 'Physics Tweak', desc: 'Something subtle is off' },
+  { value: 'observer_change', label: 'Observer Change', desc: "You're not the main POV" },
+]
+
+const CONSTRAINTS = [
+  { value: 'cant_speak', label: "Can't Speak", desc: 'You are unable to speak' },
+  { value: 'know_outcome', label: 'Know the Outcome', desc: 'You already know how it ends' },
+  { value: 'external_control', label: 'External Control', desc: 'Someone else is controlling events' },
+  { value: 'unreliable_memory', label: 'Unreliable Memory', desc: 'Memory cannot be trusted' },
+  { value: 'being_watched', label: 'Being Watched', desc: "You're being observed" },
+]
+
+const OUTCOME_STYLES = [
+  { value: 'quiet_tragedy', label: 'Quiet Tragedy' },
+  { value: 'cosmic_horror', label: 'Cosmic Horror' },
+  { value: 'absurd_comedy', label: 'Absurd Comedy' },
+  { value: 'bittersweet_acceptance', label: 'Bittersweet Acceptance' },
+  { value: 'inevitable', label: 'This Was Inevitable' },
+]
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
 const STORAGE_KEY = 'prism-history'
 const SETTINGS_KEY = 'prism-settings'
 
@@ -49,6 +77,10 @@ function App() {
   const [currentEntry, setCurrentEntry] = useState(null)
   const [history, setHistory] = useState(loadHistory)
   const [showHistory, setShowHistory] = useState(false)
+  const [distortion, setDistortion] = useState('random')
+  const [constraint, setConstraint] = useState('random')
+  const [outcomeStyle, setOutcomeStyle] = useState('random')
+  const [activeOptions, setActiveOptions] = useState(null)
 
   // Persist settings
   useEffect(() => {
@@ -87,11 +119,25 @@ function App() {
     setLoadingMsg(0)
     setCurrentEntry(entry.trim())
 
+    const resolvedDistortion = distortion === 'random' ? pickRandom(REALITY_DISTORTIONS).value : distortion
+    const resolvedConstraint = constraint === 'random' ? pickRandom(CONSTRAINTS).value : constraint
+    const resolvedOutcome = outcomeStyle === 'random' ? pickRandom(OUTCOME_STYLES).value : outcomeStyle
+
+    const opts = {
+      distortion: REALITY_DISTORTIONS.find(d => d.value === resolvedDistortion)?.label,
+      constraint: CONSTRAINTS.find(c => c.value === resolvedConstraint)?.label,
+      outcomeStyle: OUTCOME_STYLES.find(o => o.value === resolvedOutcome)?.label,
+    }
+    setActiveOptions(opts)
+
     try {
       const result = await generateTimelines(entry.trim(), {
         provider,
         apiKey,
         model: model || defaultModel,
+        distortion: resolvedDistortion,
+        constraint: resolvedConstraint,
+        outcomeStyle: resolvedOutcome,
       })
       setTimelines(result)
 
@@ -101,6 +147,11 @@ function App() {
         date: new Date().toISOString(),
         entry: entry.trim(),
         timelines: result,
+        options: {
+          distortion: REALITY_DISTORTIONS.find(d => d.value === resolvedDistortion)?.label,
+          constraint: CONSTRAINTS.find(c => c.value === resolvedConstraint)?.label,
+          outcomeStyle: OUTCOME_STYLES.find(o => o.value === resolvedOutcome)?.label,
+        },
       }
       const updated = [record, ...history].slice(0, 50)
       setHistory(updated)
@@ -118,6 +169,7 @@ function App() {
     setEntry(record.entry)
     setShowHistory(false)
     setError(null)
+    setActiveOptions(record.options || null)
   }
 
   function handleReset() {
@@ -125,6 +177,7 @@ function App() {
     setCurrentEntry(null)
     setError(null)
     setEntry('')
+    setActiveOptions(null)
   }
 
   return (
@@ -161,6 +214,74 @@ function App() {
           />
         </div>
       </div>
+
+      {/* Prism Options */}
+      {!timelines && !loading && (
+        <div className="prism-options">
+          <div className="option-group">
+            <div className="option-label">Reality Distortion</div>
+            <div className="option-pills">
+              <button
+                className={`option-pill ${distortion === 'random' ? 'active' : ''}`}
+                onClick={() => setDistortion('random')}
+              >
+                Roll
+              </button>
+              {REALITY_DISTORTIONS.map(d => (
+                <button
+                  key={d.value}
+                  className={`option-pill ${distortion === d.value ? 'active' : ''}`}
+                  onClick={() => setDistortion(d.value)}
+                  title={d.desc}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="option-group">
+            <div className="option-label">Constraint Mutation</div>
+            <div className="option-pills">
+              <button
+                className={`option-pill ${constraint === 'random' ? 'active' : ''}`}
+                onClick={() => setConstraint('random')}
+              >
+                Roll
+              </button>
+              {CONSTRAINTS.map(c => (
+                <button
+                  key={c.value}
+                  className={`option-pill ${constraint === c.value ? 'active' : ''}`}
+                  onClick={() => setConstraint(c.value)}
+                  title={c.desc}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="option-group">
+            <div className="option-label">Outcome Style</div>
+            <div className="option-pills">
+              <button
+                className={`option-pill ${outcomeStyle === 'random' ? 'active' : ''}`}
+                onClick={() => setOutcomeStyle('random')}
+              >
+                Roll
+              </button>
+              {OUTCOME_STYLES.map(o => (
+                <button
+                  key={o.value}
+                  className={`option-pill ${outcomeStyle === o.value ? 'active' : ''}`}
+                  onClick={() => setOutcomeStyle(o.value)}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Diary Input */}
       {!timelines && !loading && (
@@ -231,6 +352,14 @@ function App() {
             <div className="entry-label">Your Timeline &mdash; Prime</div>
             <div className="entry-text">{currentEntry}</div>
           </div>
+
+          {activeOptions && (
+            <div className="active-options-bar">
+              <span className="active-option"><strong>Distortion:</strong> {activeOptions.distortion}</span>
+              <span className="active-option"><strong>Constraint:</strong> {activeOptions.constraint}</span>
+              <span className="active-option"><strong>Tone:</strong> {activeOptions.outcomeStyle}</span>
+            </div>
+          )}
 
           {timelines.map((t, i) => (
             <div className="timeline-card" key={t.timeline_id || i}>
